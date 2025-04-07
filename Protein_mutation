@@ -1,0 +1,102 @@
+import pandas as pd
+import numpy as np
+import csv
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+
+data_source = ("https://raw.githubusercontent.com/HackBio-Internship/public_datasets/main/R/datasets/sift.tsv")
+data_source2 = ("https://raw.githubusercontent.com/HackBio-Internship/public_datasets/main/R/datasets/foldX.tsv")
+
+data = pd.read_csv(data_source, sep = '\t', header = None, names=['Protein', 'Amino_Acid', 'sift_Score'] )
+data_fold = pd.read_csv(data_source2, sep = '\t', header = None, names=['Protein', 'Amino_Acid', 'foldX_Score'] )
+
+data = data.drop(0)
+data_fold = data_fold.drop(0)
+
+print(data.head(20))
+print(data_fold.head(20))
+
+print(data.info())
+print(data_fold.info())
+
+#there were no nulls in both datasets
+
+data.drop_duplicates(subset = ['Protein', 'Amino_Acid'], inplace = True)
+data_fold.drop_duplicates(subset = ['Protein','Amino_Acid'], inplace = True)
+
+#also no duplicates so the proteins are isoforms
+
+data["specific_protein_aa"] = data["Protein"] + '_' + data["Amino_Acid"]
+data_fold["specific_protein_aa"] = data_fold["Protein"] + '_' + data_fold["Amino_Acid"]
+
+print(data.head(5))
+
+df = data.merge(data_fold, how = "inner", on = "specific_protein_aa")
+
+def deleterious(df):
+    is_deleterious = ((df["sift_Score"] < 0.05) & (df["foldX_Score"] > 2))
+
+    df["status"] = np.where(is_deleterious, "deleterious", "unaffected")
+
+    return df
+
+df = deleterious(df)
+print(df.head(20))
+
+affected = df.loc[df['status'] == 'deleterious']
+
+uniquex = affected['Amino_Acid_x'].str[0]
+uniquex_counts = uniquex.value_counts().reset_index()
+uniquex_counts.columns = ['Amino Acid', 'Frequency']
+
+uniquey = affected['Amino_Acid_y'].str[0]
+uniquey_counts = uniquey.value_counts().reset_index()
+uniquey_counts.columns = ['Amino Acid', 'Frequency']
+
+
+print(uniquex_counts)
+
+sns.barplot(uniquex_counts, x = 'Amino Acid', y = 'Frequency')
+
+sns.barplot(uniquey_counts, x = 'Amino Acid', y = 'Frequency')
+
+print("The visulaization shows the amino acid most affected by mutation")
+
+
+sns.set_style("whitegrid")
+plt.figure(figsize = (8, 6))
+plt.pie(uniquex_counts['Frequency'], labels= uniquex_counts['Amino Acid'], autopct= '%1.1f%%')
+plt.title("The amino acids most affected structurally and functionally by mutations")
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+    
+
+
+
+
+
+
+                               
+                        
+
